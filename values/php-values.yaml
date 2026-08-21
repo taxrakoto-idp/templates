@@ -1,0 +1,25 @@
+replicaCount: 1
+
+image:
+  repository: docker.io/library/php
+  tag: ${{ values.phpVersion | dump }}
+  pullPolicy: IfNotPresent
+
+source:
+  repository: ${{ values.sourceRepository | dump }}
+  revision: ${{ values.sourceRevision | dump }}
+  depth: 1
+  credentials:
+    # Leave empty for the public application repositories used by this demo.
+    existingSecret: ""
+
+env:
+  APP_NAME: ${{ values.name | dump }}
+  APP_ENV: ${{ values.environment | dump }}
+  APP_MESSAGE: ${{ values.message | dump }}
+
+containerPort: ${{ values.containerPort }}
+
+service:
+  type: ClusterIP
+  port: ${{ values.servicePort }}

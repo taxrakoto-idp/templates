@@ -1,0 +1,78 @@
+name: Promote source revision
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  update-gitops:
+    name: Update application GitOps values
+    runs-on: ubuntu-latest
+    env:
+      GITOPS_REPOSITORY: ${{ values.gitopsRepository }}
+      GITOPS_VALUES_PATH: apps/${{ values.environment }}/${{ values.name }}/values.yaml
+      GITOPS_USERNAME: gitops-bot
+      GITOPS_TOKEN: ${{ '${{ secrets.GITOPS_TOKEN }}' }}
+      SOURCE_REVISION: ${{ '${{ gitea.sha }}' }}
+    steps:
+      - name: Validate application source
+        run: |
+          # Add application-specific validation commands here before promotion.
+          echo "Promoting source revision ${SOURCE_REVISION}"
+
+      - name: Update desired source revision
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          gitops_host="$(node -e 'process.stdout.write(new URL(process.env.GITOPS_REPOSITORY).hostname)')"
+          gitops_directory="$(mktemp -d)"
+
+          cleanup() {
+            rm -rf "${gitops_directory}"
+            rm -f "${HOME}/.netrc"
+          }
+          trap cleanup EXIT
+
+          umask 077
+          printf 'machine %s\nlogin %s\npassword %s\n' \
+            "${gitops_host}" "${GITOPS_USERNAME}" "${GITOPS_TOKEN}" \
+            > "${HOME}/.netrc"
+
+          git clone --depth=1 "${GITOPS_REPOSITORY}" "${gitops_directory}"
+          cd "${gitops_directory}"
+
+          if [ ! -f "${GITOPS_VALUES_PATH}" ]; then
+            echo "GitOps values file not found: ${GITOPS_VALUES_PATH}" >&2
+            exit 1
+          fi
+
+          VALUES_FILE="${GITOPS_VALUES_PATH}" node <<'NODE'
+          const fs = require('node:fs');
+
+          const path = process.env.VALUES_FILE;
+          const revision = process.env.SOURCE_REVISION;
+          const input = fs.readFileSync(path, 'utf8');
+          const revisionLine = /^(\s*revision:\s*).+$/m;
+
+          if (!revisionLine.test(input)) {
+            throw new Error(`source.revision was not found in ${path}`);
+          }
+
+          fs.writeFileSync(
+            path,
+            input.replace(revisionLine, `$1${JSON.stringify(revision)}`),
+          );
+          NODE
+
+          if git diff --quiet -- "${GITOPS_VALUES_PATH}"; then
+            echo "GitOps already references ${SOURCE_REVISION}"
+            exit 0
+          fi
+
+          git config user.name "${GITOPS_USERNAME}"
+          git config user.email "gitops-bot@local.domain"
+          git add "${GITOPS_VALUES_PATH}"
+          git commit -m "deploy(${{ values.name }}): promote ${SOURCE_REVISION}"
+          git push origin HEAD:main
