@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GITOPS_REPOSITORY: ${{ values.gitopsRepository }}
-      GITOPS_VALUES_PATH: apps/${{ values.environment }}/${{ values.name }}/values.yaml
+      GITOPS_VALUES_PATH: apps/${{ values.name }}/${{ values.environment }}/values.yaml
       GITOPS_USERNAME: gitops-bot
       GITOPS_TOKEN: ${{ '${{ secrets.GITOPS_TOKEN }}' }}
       SOURCE_REVISION: ${{ '${{ gitea.sha }}' }}

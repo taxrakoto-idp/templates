@@ -1,0 +1,114 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: php-web-application
+  title: PHP web application
+  description: Create a PHP application in Gitea and deploy it through Argo CD
+  tags:
+    - php
+    - gitea
+    - gitops
+spec:
+  owner: user:default/guest
+  type: website
+
+  parameters:
+    - title: Application details
+      required:
+        - name
+        - phpVersion
+        - environment
+      properties:
+        name:
+          title: Application name
+          type: string
+          description: Lowercase name used for the repository and Kubernetes resources
+          pattern: '^[a-z][a-z0-9-]{1,61}[a-z0-9]$'
+          ui:field: EntityNamePicker
+          ui:autofocus: true
+        phpVersion:
+          title: PHP version
+          type: string
+          description: Official PHP Apache image tag
+          default: 8.4-apache
+          enum:
+            - 8.5-apache
+            - 8.4-apache
+            - 8.3-apache
+          enumNames:
+            - PHP 8.5
+            - PHP 8.4
+            - PHP 8.3
+          ui:widget: radio
+        environment:
+          title: Environment
+          type: string
+          default: dev
+          enum:
+            - dev
+            - staging
+            - prod
+          enumNames:
+            - Development
+            - Staging
+            - Production
+          ui:widget: radio
+
+  steps:
+    - id: fetchWorkflow
+      name: Prepare Gitea Actions workflow
+      action: fetch:template
+      input:
+        url: ../actions
+        targetPath: application/.gitea/workflows
+        values:
+          name: ${{ parameters.name }}
+          environment: ${{ parameters.environment }}
+          gitopsRepository: http://gitea-http.gitea.svc:3000/demo-idp/application-gitops.git
+
+    - id: publishApplication
+      name: Create application repository
+      action: publish:gitea
+      input:
+        repoUrl: gitea-http.gitea.svc:3000?owner=demo-idp&repo=${{ parameters.name }}
+        description: PHP application ${{ parameters.name }} managed by Backstage
+        defaultBranch: main
+        repoVisibility: public
+        sourcePath: application
+        gitCommitMessage: Initialize ${{ parameters.name }}
+        gitAuthorName: backstage-bot
+        gitAuthorEmail: backstage-bot@local.domain
+
+    - id: fetchValues
+      name: Render Helm values
+      action: fetch:template
+      input:
+        url: ../values
+        targetPath: gitops
+        values:
+          name: ${{ parameters.name }}
+          environment: ${{ parameters.environment }}
+          phpVersion: ${{ parameters.phpVersion }}
+          sourceRepository: http://gitea-http.gitea.svc:3000/demo-idp/${{ parameters.name }}.git
+          sourceRevision: ${{ steps.publishApplication.output.commitHash }}
+          message: Created with the Backstage PHP golden path
+          containerPort: 80
+          servicePort: 80
+
+    - id: publishValues
+      name: Add application to GitOps
+      action: gitea:gitops:createFile
+      input:
+        sourcePath: gitops/php-values.yaml
+        filePath: apps/${{ parameters.name }}/${{ parameters.environment }}/values.yaml
+        commitMessage: 'deploy(${{ parameters.name }}): add ${{ parameters.environment }} environment'
+
+  output:
+    links:
+      - title: Application source repository
+        url: ${{ steps.publishApplication.output.remoteUrl }}
+      - title: Application GitOps values
+        url: ${{ steps.publishValues.output.fileUrl }}
+    text:
+      - title: Deployment
+        content: Argo CD will create `${{ parameters.name }}-${{ parameters.environment }}` after it detects the new GitOps values file.
