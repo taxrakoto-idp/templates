@@ -64,7 +64,7 @@ spec:
         values:
           name: ${{ parameters.name }}
           environment: ${{ parameters.environment }}
-          gitopsRepository: http://gitea-http.gitea.svc:3000/demo-idp/application-gitops.git
+          gitopsRepository: http://gitea-http.gitea.svc.cluster.local:3000/demo-idp/application-gitops.git
 
     - id: publishApplication
       name: Create application repository
@@ -89,7 +89,7 @@ spec:
           name: ${{ parameters.name }}
           environment: ${{ parameters.environment }}
           phpVersion: ${{ parameters.phpVersion }}
-          sourceRepository: http://gitea-http.gitea.svc:3000/demo-idp/${{ parameters.name }}.git
+          sourceRepository: http://gitea-http.gitea.svc.cluster.local:3000/demo-idp/${{ parameters.name }}.git
           sourceRevision: ${{ steps.publishApplication.output.commitHash }}
           message: Created with the Backstage PHP golden path
           containerPort: 80
