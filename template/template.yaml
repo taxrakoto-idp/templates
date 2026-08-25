@@ -139,3 +139,4 @@ spec:
           The private GitOps values are stored at
           `apps/${{ parameters.name }}/${{ parameters.environment }}/values.yaml`
           in `demo-idp/application-gitops`.
+          You need to push your code into the App source repository and it will be synced automatically 
