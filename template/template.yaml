@@ -104,11 +104,25 @@ spec:
         commitMessage: 'deploy(${{ parameters.name }}): add ${{ parameters.environment }} environment'
 
   output:
-    links:
-      - title: Application source repository
-        url: ${{ steps.publishApplication.output.remoteUrl }}
-      - title: Application GitOps values
-        url: ${{ steps.publishValues.output.fileUrl }}
     text:
       - title: Deployment
-        content: Argo CD will create `${{ parameters.name }}-${{ parameters.environment }}` after it detects the new GitOps values file.
+        content: |
+          Argo CD will create `${{ parameters.name }}-${{ parameters.environment }}` after it detects the new GitOps values file.
+
+          Expose Gitea before opening the repository links:
+
+          ```bash
+          kubectl --namespace gitea port-forward service/gitea-http 3000:3000
+          ```
+
+          After the Argo CD application is Healthy, expose the generated application:
+
+          ```bash
+          kubectl --namespace ${{ parameters.name }}-${{ parameters.environment }} port-forward service/${{ parameters.name }} 8080:80
+          ```
+
+          Links (available after running the corresponding port-forward command):
+
+          - [Application source repository](http://localhost:3000/demo-idp/${{ parameters.name }})
+          - [Application GitOps values](http://localhost:3000/demo-idp/application-gitops/src/branch/main/apps/${{ parameters.name }}/${{ parameters.environment }}/values.yaml)
+          - [Application](http://localhost:8080)
