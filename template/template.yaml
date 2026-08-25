@@ -55,6 +55,16 @@ spec:
           ui:widget: radio
 
   steps:
+    - id: fetchApplication
+      name: Prepare starter application
+      action: fetch:template
+      input:
+        url: ../skeleton
+        targetPath: application
+        values:
+          name: ${{ parameters.name }}
+          environment: ${{ parameters.environment }}
+
     - id: fetchWorkflow
       name: Prepare Gitea Actions workflow
       action: fetch:template
@@ -124,5 +134,8 @@ spec:
           Links (available after running the corresponding port-forward command):
 
           - [Application source repository](http://localhost:3000/demo-idp/${{ parameters.name }})
-          - [Application GitOps values](http://localhost:3000/demo-idp/application-gitops/src/branch/main/apps/${{ parameters.name }}/${{ parameters.environment }}/values.yaml)
           - [Application](http://localhost:8080)
+
+          The private GitOps values are stored at
+          `apps/${{ parameters.name }}/${{ parameters.environment }}/values.yaml`
+          in `demo-idp/application-gitops`.
