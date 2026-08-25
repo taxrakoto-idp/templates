@@ -128,13 +128,13 @@ spec:
           After the Argo CD application is Healthy, expose the generated application:
 
           ```bash
-          kubectl --namespace ${{ parameters.name }}-${{ parameters.environment }} port-forward service/${{ parameters.name }} 8080:80
+          kubectl --namespace ${{ parameters.name }}-${{ parameters.environment }} port-forward service/${{ parameters.name }} 8181:80
           ```
 
           Links (available after running the corresponding port-forward command):
 
           - [Application source repository](http://localhost:3000/demo-idp/${{ parameters.name }})
-          - [Application](http://localhost:8080)
+          - [Application](http://localhost:8181)
 
           The private GitOps values are stored at
           `apps/${{ parameters.name }}/${{ parameters.environment }}/values.yaml`
